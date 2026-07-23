@@ -12,6 +12,7 @@ class User(Base):
     name = Column(String(50), nullable=False)
     phone = Column(String(15), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
 
 
 class Customer(User):

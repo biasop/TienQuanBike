@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 from uuid import UUID
@@ -8,6 +8,21 @@ from decimal import Decimal
 class UserBase(BaseModel):
     name: str = Field(..., max_length=50)
     phone: str = Field(..., max_length=15)
+    email: str = Field(..., max_length=100)
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str):
+        if not v.isdigit() or len(v) != 10:
+            raise ValueError("Số điện thoại phải là 10 chữ số")
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def validate_gmail(cls, v: str):
+        if not v.endswith("@gmail.com"):
+            raise ValueError("Email phải có đuôi @gmail.com")
+        return v
 
 class UserCreate(UserBase):
     password: str
