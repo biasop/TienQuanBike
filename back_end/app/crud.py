@@ -16,6 +16,7 @@ def create_customer(db: Session, customer_in: schemas.CustomerCreate):
     db_customer = Customer(
         name=customer_in.name,
         phone=customer_in.phone,
+        email=customer_in.email,
         password=customer_in.password,
         rating=customer_in.rating,
         total_rides=customer_in.total_rides
@@ -33,6 +34,7 @@ def create_driver(db: Session, driver_in: schemas.DriverCreate):
     db_driver = Driver(
         name=driver_in.name,
         phone=driver_in.phone,
+        email=driver_in.email,
         password=driver_in.password,
         driving_license_no=driver_in.driving_license_no,
         identity_card_no=driver_in.identity_card_no,
