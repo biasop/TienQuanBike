@@ -5,23 +5,33 @@ from uuid import UUID
 from decimal import Decimal
 
 # --- USER SCHEMAS ---
+import re
+from pydantic import BaseModel, Field, field_validator
 class UserBase(BaseModel):
-    name: str = Field(..., max_length=50)
-    phone: str = Field(..., max_length=15)
-    email: str = Field(..., max_length=100)
+    name: str = Field(..., max_length=50, description="Tên người dùng")
+    phone: str = Field(..., min_length=10, max_length=10, description="Số điện thoại")
+    email: str = Field(..., max_length=100, description="Địa chỉ Email")
 
     @field_validator("phone")
     @classmethod
-    def validate_phone(cls, v: str):
-        if not v.isdigit() or len(v) != 10:
-            raise ValueError("Số điện thoại phải là 10 chữ số")
+    def validate_phone(cls, v: str) -> str:
+        # Xóa khoảng trắng thừa
+        v = v.strip()
+        # Sử dụng biểu thức chính quy (Regex) để kiểm tra:
+        # Bắt đầu bằng số 0 và theo sau là 9 chữ số khác (Tổng cộng 10 số)
+        phone_regex = r"^0\d{9}$"
+        if not re.match(phone_regex, v):
+            raise ValueError("Số điện thoại không hợp lệ.")
         return v
 
     @field_validator("email")
     @classmethod
-    def validate_gmail(cls, v: str):
+    def validate_gmail(cls, v: str) -> str:
+        # Chuẩn hóa chuỗi: xóa khoảng trắng và chuyển về chữ thường
+        v = v.strip().lower()
+        
         if not v.endswith("@gmail.com"):
-            raise ValueError("Email phải có đuôi @gmail.com")
+            raise ValueError("Hệ thống chỉ hỗ trợ email có đuôi @gmail.com.")
         return v
 
 class UserCreate(UserBase):

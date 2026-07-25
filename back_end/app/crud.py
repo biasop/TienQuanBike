@@ -16,6 +16,7 @@ def create_customer(db: Session, customer_in: schemas.CustomerCreate):
     db_customer = Customer(
         name=customer_in.name,
         phone=customer_in.phone,
+        email=customer_in.email,
         password=customer_in.password,
         rating=customer_in.rating,
         total_rides=customer_in.total_rides
