@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 from decimal import Decimal
@@ -39,38 +39,60 @@ class UserCreate(UserBase):
 
 class UserOut(UserBase):
     id: UUID
+    rating: Decimal = Decimal("5.0")
+    total_rides: int = 0
+
     class Config:
         from_attributes = True
-
-
-# --- CUSTOMER SCHEMAS ---
-class CustomerCreate(UserCreate):
-    rating: Optional[Decimal] = 5.0
-    total_rides: Optional[int] = 0
-
-class CustomerOut(UserOut):
-    rating: Decimal
-    total_rides: int
-    class Config:
-        from_attributes = True
-
 
 # --- DRIVER SCHEMAS ---
-class DriverCreate(UserCreate):
+class DriverProfileBase(BaseModel):
     driving_license_no: str = Field(..., max_length=50)
     identity_card_no: str = Field(..., max_length=20)
-    wallet_balance: Optional[Decimal] = 0.0
-    rating: Optional[Decimal] = 5.0
+    wallet_balance: Optional[Decimal] = Decimal("0.0")
+    rating: Optional[Decimal] = Decimal("5.0")
     is_online: Optional[bool] = False
     status: Optional[str] = "offline"
 
+class DriverProfileOut(DriverProfileBase):
+    user_id: UUID
+
+    class Config:
+        from_attributes = True
+
+class DriverCreate(UserCreate, DriverProfileBase):
+    pass
+
 class DriverOut(UserOut):
-    driving_license_no: str
-    identity_card_no: str
-    wallet_balance: Decimal
-    rating: Decimal
-    is_online: bool
-    status: str
+    driver_profile: Optional[DriverProfileOut] = None
+
+    class Config:
+        from_attributes = True
+
+
+# --- AUTH SCHEMAS ---
+class LoginRequest(BaseModel):
+    identifier: str = Field(..., description="Số điện thoại hoặc Email")
+    password: str = Field(..., description="Mật khẩu")
+    login_as: Optional[str] = Field("customer", description="Vai trò muốn đăng nhập: 'customer' hoặc 'driver'")
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    roles: List[str]
+    active_role: str
+    user_id: UUID
+
+class TokenData(BaseModel):
+    user_id: Optional[UUID] = None
+    roles: Optional[List[str]] = None
+    active_role: Optional[str] = None
+
+class UserMeOut(UserOut):
+    roles: List[str]
+    active_role: Optional[str] = "customer"
+    driver_profile: Optional[DriverProfileOut] = None
+
     class Config:
         from_attributes = True
 
@@ -88,7 +110,7 @@ class TripCreate(BaseModel):
 
 class TripUpdateStatus(BaseModel):
     status: str  # accepted, picked_up, completed, cancelled
-    d_id: Optional[UUID] = None  # Gửi lên d_id khi tài xế nhận chuyến
+    d_id: Optional[UUID] = None  # Gửi lên d_id (User ID của tài xế) khi nhận chuyến
 
 class TripOut(BaseModel):
     trip_id: UUID
