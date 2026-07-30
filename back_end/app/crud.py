@@ -65,25 +65,22 @@ def get_driver(db: Session, user_id: UUID):
     return db.query(Driver).filter(Driver.user_id == user_id).first()
 
 def create_driver(db: Session, driver_in: schemas.DriverCreate):
-    # Kiểm tra xem User đã tồn tại (ví dụ đã đăng ký làm Customer trước đó)
-    existing_user = get_user_by_identifier(db, driver_in.phone)
-    if not existing_user:
-        # Nếu chưa có User -> Tạo User mới trước
-        existing_user = User(
-            name=driver_in.name,
-            phone=driver_in.phone,
-            email=driver_in.email,
-            password=driver_in.password,
-            rating=5.0,
-            total_rides=0
-        )
-        db.add(existing_user)
-        db.commit()
-        db.refresh(existing_user)
+    # Tạo User mới
+    new_user = User(
+        name=driver_in.name,
+        phone=driver_in.phone,
+        email=driver_in.email,
+        password=driver_in.password,
+        rating=5.0,
+        total_rides=0
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
     # Đã có User -> Bổ sung Driver Profile vào bảng driver
     db_driver = Driver(
-        user_id=existing_user.id,
+        user_id=new_user.id,
         driving_license_no=driver_in.driving_license_no,
         identity_card_no=driver_in.identity_card_no,
         wallet_balance=driver_in.wallet_balance if driver_in.wallet_balance is not None else 0.0,
@@ -94,8 +91,25 @@ def create_driver(db: Session, driver_in: schemas.DriverCreate):
     db.add(db_driver)
     db.commit()
     db.refresh(db_driver)
-    db.refresh(existing_user)
-    return existing_user
+    db.refresh(new_user)
+    return new_user
+
+def create_driver_profile_for_existing_user(db: Session, user_id: UUID, upgrade_in: schemas.DriverUpgrade):
+    db_driver = Driver(
+        user_id=user_id,
+        driving_license_no=upgrade_in.driving_license_no,
+        identity_card_no=upgrade_in.identity_card_no,
+        wallet_balance=upgrade_in.wallet_balance if upgrade_in.wallet_balance is not None else 0.0,
+        rating=upgrade_in.rating if upgrade_in.rating is not None else 5.0,
+        is_online=upgrade_in.is_online if upgrade_in.is_online is not None else False,
+        status=upgrade_in.status if upgrade_in.status is not None else "offline"
+    )
+    db.add(db_driver)
+    db.commit()
+    db.refresh(db_driver)
+    user = get_user(db, user_id)
+    return user
+
 
 
 # --- TRIP CRUD ---

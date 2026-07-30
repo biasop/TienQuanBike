@@ -53,6 +53,9 @@ class DriverProfileOut(DriverProfileBase):
 class DriverCreate(UserCreate, DriverProfileBase):
     pass
 
+class DriverUpgrade(DriverProfileBase):
+    pass
+
 class DriverOut(UserOut):
     driver_profile: Optional[DriverProfileOut] = None
 

@@ -23,7 +23,7 @@ def register_customer(customer: schemas.UserCreate, db: Session = Depends(get_db
     return crud.create_customer(db, customer)
 
 
-# --- ĐĂNG KÝ HỒ SƠ TÀI XẾ ---
+# --- ĐĂNG KÝ HỒ SƠ TÀI XẾ MỚI (CHƯA CÓ TÀI KHOẢN) ---
 @router.post("/register/driver", response_model=schemas.DriverOut, status_code=status.HTTP_201_CREATED)
 def register_driver(driver: schemas.DriverCreate, db: Session = Depends(get_db)):
     # Kiểm tra Bằng lái xe
@@ -36,15 +36,49 @@ def register_driver(driver: schemas.DriverCreate, db: Session = Depends(get_db))
     if existing_id_card:
         raise HTTPException(status_code=400, detail="Số căn cước công dân đã tồn tại trên hệ thống.")
 
-    # Kiểm tra xem User đã tồn tại hay chưa
-    user = crud.get_user_by_identifier(db, driver.phone)
-    if not user:
-        # Nếu chưa có User -> Kiểm tra Email trùng
-        existing_email = db.query(models.User).filter(models.User.email == driver.email).first()
-        if existing_email:
-            raise HTTPException(status_code=400, detail="Email này đã được sử dụng.")
+    # Kiểm tra SĐT đã tồn tại chưa
+    existing_phone = db.query(models.User).filter(models.User.phone == driver.phone).first()
+    if existing_phone:
+        raise HTTPException(
+            status_code=400,
+            detail="Số điện thoại này đã được sử dụng. Vui lòng Đăng nhập tài khoản và chọn Nâng cấp làm Tài xế."
+        )
+
+    # Kiểm tra Email đã tồn tại chưa
+    existing_email = db.query(models.User).filter(models.User.email == driver.email).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Email này đã được sử dụng.")
 
     return crud.create_driver(db, driver)
+
+
+# --- NÂNG CẤP TÀI KHOẢN TÀI XẾ (DÀNH CHO TÀI KHOẢN ĐÃ ĐĂNG NHẬP) ---
+@router.post("/upgrade/driver", response_model=schemas.DriverOut, status_code=status.HTTP_201_CREATED)
+def upgrade_to_driver(
+    upgrade_data: schemas.DriverUpgrade,
+    current_user: models.User = Depends(security.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Nâng cấp tài khoản đang đăng nhập hiện tại lên làm Tài xế (Chỉ cần gửi Bằng lái & CCCD).
+    """
+    # Kiểm tra xem tài khoản này đã có profile tài xế chưa
+    existing_driver = crud.get_driver(db, current_user.id)
+    if existing_driver:
+        raise HTTPException(status_code=400, detail="Tài khoản này đã đăng ký hồ sơ Tài xế trước đó.")
+
+    # Kiểm tra Bằng lái xe trùng
+    existing_license = db.query(models.Driver).filter(models.Driver.driving_license_no == upgrade_data.driving_license_no).first()
+    if existing_license:
+        raise HTTPException(status_code=400, detail="Số bằng lái xe đã tồn tại trên hệ thống.")
+
+    # Kiểm tra CCCD trùng
+    existing_id_card = db.query(models.Driver).filter(models.Driver.identity_card_no == upgrade_data.identity_card_no).first()
+    if existing_id_card:
+        raise HTTPException(status_code=400, detail="Số căn cước công dân đã tồn tại trên hệ thống.")
+
+    return crud.create_driver_profile_for_existing_user(db, current_user.id, upgrade_data)
+
 
 
 # --- ĐĂNG NHẬP (OAUTH2 FORM DÙNG CHO SWAGGER UI) ---
