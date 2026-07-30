@@ -55,6 +55,7 @@ class Trip(Base):
     dest_lng = Column(Numeric(10, 8), nullable=False)
     dest_address = Column(String(255), nullable=False)
     
+    distance = Column(Numeric(10, 2), nullable=False)
     fee = Column(Numeric(15, 2), nullable=False)
     status = Column(String(20), default="requested") # requested, accepted, picked_up, completed, cancelled
 
